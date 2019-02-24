@@ -1,125 +1,217 @@
+/*global flyd, P, S, PS*/
+// architecture http://meiosis.js.org/docs/toc.html
+const { render, html } = lighterhtml;
 
-// const { render, html } = lighterhtml;
-// console.log(12345, flyd)
-// /*global flyd, P, S, PS*/
-// var conditions = {
-// 	initialState: {
-// 		conditions: {
-// 			precipitations: false,
-// 			sky: "SUNNY"
-// 		}
-// 	},
-// 	actions: function (update) {
-// 		return {
-// 			togglePrecipitations: function (value) {
-// 				update({ conditions: PS({ precipitations: value }) });
-// 			},
-// 			changeSky: function (value) {
-// 				update({ conditions: PS({ sky: value }) });
-// 			}
-// 		};
-// 	}
-// };
+var Session ={ 
+	initialState: {
 
-// var skyOption = function ({ state, actions, value, label }) {
-// 	return html`<label>
-// 	<input type="radio" id=${value} name="sky" value=${value} checked=${state.conditions.sky===value} onchange=${evt=> actions.changeSky(evt.target.value)}/> ${label}
-// </label>`;
-// };
+	},
+	actions: function (update) {
+		return {
+			muteVideo: function (value) {
+				update({ conditions: PS({ precipitations: value }) });
+			},
+			muteAudio: function (value) {
+				update({ conditions: PS({ sky: value }) });
+			},
+			leaveRoom: function (value){
 
-// var Conditions = function (state, actions) {
-// 	return html`<div>
-// 	<label>
-// 		<input type="checkbox" checked=${state.conditions.precipitations} onchange=${evt=> actions.togglePrecipitations(evt.target.checked) }/> Precipitations
-// 	</label>
-// 	<div>
-// 		${skyOption({ state, actions, value: "SUNNY", label: "Sunny" })} ${skyOption({ state, actions, value: "CLOUDY", label: "Cloudy"
-// 		})} ${skyOption({ state, actions, value: "MIX", label: "Mix of sun/clouds" })}
-// 	</div>
-// </div>`;
-// };
+			}
+		};
+	}
+}
 
-// var convert = function (value, to) {
-// 	return Math.round(
-// 		(to === "C") ? ((value - 32) / 9 * 5) : (value * 9 / 5 + 32)
-// 	);
-// };
 
-// var temperature = {
-// 	initialState: function (label) {
-// 		return {
-// 			label,
-// 			value: 22,
-// 			units: "C"
-// 		};
-// 	},
-// 	actions: function (update) {
-// 		return {
-// 			increment: function (id, amount) {
-// 				update({ [id]: PS({ value: S(x => x + amount) }) });
-// 			},
-// 			changeUnits: function (id) {
-// 				update({
-// 					[id]: S(state => {
-// 						var value = state.value;
-// 						var newUnits = state.units === "C" ? "F" : "C";
-// 						var newValue = convert(value, newUnits);
-// 						state.value = newValue;
-// 						state.units = newUnits;
-// 						return state;
-// 					})
-// 				});
-// 			}
-// 		};
-// 	}
-// };
+function Session({state, actions}){
+	var {muteVideo, muteAudio, leaveRoom} = actions
+	return html`
+<div>
+	<nav id="nav-session" class="navbar navbar-default">
+		<div class="container">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="/">
+					<img class="demo-logo" src="resources/images/openvidu_vert_white_bg_trans_cropped.png" /> getaroom</a>
+				<button id="leave-room" type="button" class="btn btn-danger" onclick="aleaveRoom()">
+					<span class="hidden-xs">Leave Room</span>
+					<span class="hidden-sm hidden-md hidden-lg">Leave</span>
+				</button>
+				<form class="hidden-xs">
+					<div class="input-group">
+						<input type="text" class="form-control" placeholder="Some path" id="copy-input">
+						<span class="input-group-btn">
+							<button class="btn btn-default" type="button" id="copy-button" data-toggle="tooltip" data-placement="button" title="Copy to Clipboard">Share the URL</button>
+						</span>
+					</div>
+				</form>
+				<button id="mute-video" type="button" class="btn btn-primary float-right mute-button" onclick="muteVideo()">
+					<span class="glyphicon glyphicon-facetime-video"></span>
+					<span class="hidden-xs">Video</span>
+				</button>
+				<button id="mute-audio" type="button" class="btn btn-primary float-right mute-button" onclick="muteAudio()">
+					<span class="glyphicon glyphicon-volume-up"></span>
+					<span class="hidden-xs">Audio</span>
+				</button>
+			</div>
+		</div>
+	</nav>
 
-// var Temperature = function (state, id, actions) {
-// 	return html`<div>
-// 	${state[id].label} Temperature: ${state[id].value} &deg; ${state[id].units}
-// 	<div>
-// 		<button onclick=${()=> actions.increment(id, 1)}> Increment
-// 		</button>
-// 		<button onclick=${()=> actions.increment(id, -1)}> Decrement
-// 		</button>
-// 	</div>
-// 	<div>
-// 		<button onclick=${()=> actions.changeUnits(id)}> Change Units
-// 		</button>
-// 	</div>
-// </div>`;
-// };
+	<div id="session" hidden>
 
-// var app = {
-// 	initialState: Object.assign({},
-// 		conditions.initialState,
-// 		{ air: temperature.initialState("Air") },
-// 		{ water: temperature.initialState("Water") }
-// 	),
-// 	actions: function (update) {
-// 		return Object.assign({},
-// 			conditions.actions(update),
-// 			temperature.actions(update)
-// 		);
-// 	}
-// };
+		<div id="videos" class="row no-margin">
+			<div id="publisher"></div>
+		</div>
+	</div>
+</div>
+	`
+}
 
-// var App = function (state, actions) {
-// 	console.log(123)
-// 	return html`<div>
-// 	${Conditions(state, actions)} ${Temperature(state, "air", actions)} ${Temperature(state, "water", actions)}
-// 	<pre>${JSON.stringify(state, null, 4)}</pre>
-// </div>`;
-// };
+var begin = {
+	initialState: {
+		session: {
+			on: false,
+			connected: false,
+			sessionId: null,
 
-// var update = flyd.stream();
-// var states = flyd.scan(P, app.initialState, update);
+		}
+	},
+	actions: function (update) {
+		return {
+			joinRoom: function (value) {
+				update({ session: PS({ on: true }) })
+			},
+		};
+	}
+}
 
-// var actions = app.actions(update);
-// var element = document.getElementById("app");
-// states.map(state => render(element, () => App(state, actions)));
+function Begin ({state, actions}){
+	return html`
+	<div>
+	<nav id="nav-join" class="navbar navbar-default">
+		<div class="container">
+			<div class="navbar-header">
+				<a class="navbar-brand" href="/">
+					<img class="demo-logo" src="resources/images/openvidu_vert_white_bg_trans_cropped.png" /> getaroom</a>
+				<a class="navbar-brand nav-icon" href="https://github.com/OpenVidu/openvidu-tutorials/tree/master/openvidu-getaroom" title="GitHub Repository"
+				 target="_blank">
+					<i class="fa fa-github" aria-hidden="true"></i>
+				</a>
+				<a class="navbar-brand nav-icon" href="http://www.openvidu.io/docs/tutorials/openvidu-getaroom/" title="Documentation" target="_blank">
+					<i class="fa fa-book" aria-hidden="true"></i>
+				</a>
+			</div>
+		</div>
+	</nav>
+	<div id="join" class="row no-margin" hidden>
+		<div id="img-div">
+			<img src="resources/images/openvidu_grey_bg_transp_cropped.png" />
+		</div>
+		<div id="join-dialog" class="jumbotron vertical-center">
+			<h1 class="arciform">Get a room</h1>
+			<button type="button" class="btn btn-lg btn-success" onclick="joinRoom(); return false;">Go!</button>
+		</div>
+	</div>
+	<footer class="footer">
+		<div class="container">
+			<div class="text-muted">OpenVidu © 2017</div>
+			<a href="http://www.openvidu.io/" target="_blank">
+				<img class="openvidu-logo" src="resources/images/openvidu_globe_bg_transp_cropped.png" />
+			</a>
+		</div>
+		</footer>
+</div>
+	`
+}
 
-// // Meteor.startup(() => {
-// //   var element = document.getElementById("app");
-// //   states.map(state => render(element, () => App(state, actions)));
-// // });
+
+function all ({state, actions}){
+	return html`
+	
+		
+		<div id="main-container" class="container">
+		
+		
+			${state.session.on? Session: Begin}
+
+		
+		</div>
+		
+	`
+}
+
+const VideoInsertService = {
+	initial() {
+		return {
+
+		};
+	},
+	service(state){
+		if (state.session.on){
+			var { OV, sessionId } = state.session
+			if (!sessionId) {
+				// If the user is joining to a new room
+				sessionId = randomString();
+			}
+			var path = (location.pathname.slice(-1) == "/" ? location.pathname : location.pathname + "/");
+			window.history.pushState("", "", path + '#' + sessionId);
+			initializeSessionView();
+			var {OV} = state.session
+			publisher = OV.initPublisher('publisher', {
+				audioSource: undefined, // The source of audio. If undefined default audio input
+				videoSource: undefined, // The source of video. If undefined default video input
+				publishAudio: true,  	// Whether to start publishing with your audio unmuted or not
+				publishVideo: true,  	// Whether to start publishing with your video enabled or not
+				resolution: '640x480',  // The resolution of your video
+				frameRate: 30,			// The frame rate of your video
+				insertMode: 'APPEND',	// How the video is inserted in target element 'video-container'
+				mirror: true       		// Whether to mirror your local video or not
+			});
+		}
+	}
+};
+
+const update = m.stream();
+const T = (x, f) => f(x);
+const state = m.stream.scan(T, initialState(), update);
+const element = document.getElementById("app");
+states.map(view(update)).map(v => m.render(element, v));
+
+
+
+window.addEventListener('load', function () {
+	sessionId = window.location.hash.slice(1); // For 'https://myurl/#roomId', sessionId would be 'roomId'
+	if (sessionId) {
+		// The URL has a session id. Join the room right away
+		console.log("Joining to room " + sessionId);
+		showSessionHideJoin();
+		joinRoom();
+	} else {
+		// The URL has not a session id. Show welcome page
+		showJoinHideSession();
+	}
+});
+
+window.addEventListener('beforeunload', function () {
+	if (session) session.disconnect();
+});
+
+
+//////UTITLIES/////////////////////////////////////////////////////////////////////////////
+function dropRepeatsWith(eq, s) {
+	var prev;
+	return flyd.combine(function (s, self) {
+		if (!self.hasVal || !eq(s.val, prev)) {
+			self(s.val);
+			prev = s.val;
+		}
+	}, [s]);
+}
+
+function dropRepeats (s) {
+	return dropRepeatsWith(strictEq, s);
+};
+
+var dropRepeatsWith = flyd.curryN(2, dropRepeatsWith);
+
+function strictEq(a, b) {
+	return a === b;
+}

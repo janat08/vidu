@@ -81,7 +81,7 @@ function joinRoom() {
 				window.history.pushState("", "", path + '#' + sessionId);
 
 				// Auxiliary methods to show the session's view
-				showSessionHideJoin();
+				// showSessionHideJoin();
 				initializeSessionView();
 
 				// --- 6) Get your own camera stream with the desired properties ---
@@ -115,6 +115,8 @@ function joinRoom() {
 				console.log('There was an error connecting to the session:', error.code, error.message);
 			});
 	});
+	update({ session: PS({ on: true }) });
+
 }
 
 
@@ -164,7 +166,7 @@ function randomString() {
 }
 
 // 'Session' page
-function showSessionHideJoin() {
+function DoneshowSessionHideJoin() {
 	$('#nav-join').hide();
 	$('#nav-session').show();
 	$('#join').hide();
