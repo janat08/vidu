@@ -139,7 +139,7 @@ function Message ({name}, message){
 function Chat(state,actions){
 	var {sendMessage, updateMessage} = actions
 	return html`
-	<div class="col-sm-3 col-sm-offset-4 frame">
+	<div class="frame">
 		<ul>
 			${state.chat.map(x=>Message(state, x))}
 		</ul>
@@ -198,13 +198,14 @@ function App(state, actions){
 
 <i class="material-icons">camera_front</i>
 <i class="material-icons">camera_rear</i>
-<div id="main-video" class="green">
+<div class="grid">
+<div id="main-video" class="media green">
 				<div id="video-container" class="blue">
 					</div>
 </div>
 
 	${Chat(state, actions)}
-
+</div>
 	<pre>${JSON.stringify(state, null, 4)}</pre>
 
 </div>
