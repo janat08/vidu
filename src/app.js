@@ -108,56 +108,62 @@ session.on("connectionCreated", event => {
 })
 
 ////VIEWS///////////////////
+// http://www.prepbootstrap.com/bootstrap-template/dropdown-chat
 
 // https://bootsnipp.com/snippets/y8e4W
 function Message ({name}, message){
 	//your own message on right
 	var mine = name == message.nickname
-	var aRight = mine ? "msj-rta macro" : "msj macro"
-	var tRight = mine ? "text text-r" : "text text-l"
-	var avatar = html`
-	<div class="avatar">
-		<img class="img-circle" style="width:100%;" src="https://lh6.googleusercontent.com/-lr2nyjhhjXw/AAAAAAAAAAI/AAAAAAAARmE/MdtfUmC0M4s/photo.jpg?sz=48">
-	</div>`
-	var text = html`
-	<div class=${tRight}>
-		<p>${message.message}</p>
-		<p>
-		</p>
-	</div>
-	`
+	var aRight = mine ? "chat-message right" :"chat-message left"
+
 	return html`
-			<li style="width:100%">
-				<div class=${aRight}>
-					${!mine?avatar:text}
-					${mine?avatar:text}
-				</div>
-			</li>
+											<div class=${aRight}>
+												<img class="message-avatar" src="https://bootdey.com/img/Content/avatar/avatar1.png" alt="">
+												<div class="message">
+													<!-- <a class="message-author" href="#"> Michael Smith </a>
+													<span class="message-date"> Mon Jan 26 2015 - 18:39:23 </span> -->
+													<span class="message-content">
+														${message.message}
+													</span>
+												</div>
+												</div>
 	`
 }
+
 
 function Chat(state,actions){
 	var {sendMessage, updateMessage} = actions
 	return html`
-	<div class="frame">
-		<ul>
-			${state.chat.map(x=>Message(state, x))}
-		</ul>
-		<div>
-			<div class="msj-rta macro">
-				<div class="text text-r" style="background:whitesmoke !important">
-					<form onsubmit=${sendMessage}>
-	
-						<input class="mytext" value=${state.message} onkeydown=${updateMessage} placeholder="Type a message" />
+
+
+			<div class="ibox chat-view">
+
+				<div class="ibox-content">
+					<div class="row">
+						<div class="col-lg-3 ">
+							<div class="chat-discussion">
+								${state.chat.map(x=>Message(state,x))}
+							</div>
+
+						</div>
+
+					</div>
+					<div class="row">
+						<div class="col-lg-12">
+							<div class="chat-message-form">
+								<div class="form-group">
+									<form onsubmit=${sendMessage}>
+									<textarea value=${state.message} onkeydown=${updateMessage} class="form-control message-input" name="message" placeholder="Enter message text and press enter"></textarea>
+									<button type="submit" class="btn btn-primary">Send
+										</button>
+										</form>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
-	
 			</div>
-			<div style="padding:10px;">
-				<span class="glyphicon glyphicon-share-alt"></span>
-			</div>
-			</form>
-		</div>
-		</div>
+
 
 
 
@@ -168,46 +174,53 @@ function App(state, actions){
 	var {muteVideo, muteAudio, leaveRoom, name} = actions
 	var json = P(state, {OV: D}, {session: D})	
 	return html`
+	<div>
 	<div> ASDF</div>
 <div>
 
-				<button id="mute-video" type="button" class="btn btn-primary float-right mute-button" onclick=${()=>muteVideo()}>
-					<span class="glyphicon glyphicon-facetime-video"></span>
-					<span class="hidden-xs">Video</span>
-				</button>
-				<button id="mute-audio" type="button" class="btn btn-primary float-right mute-button" onclick="muteAudio()">
-					<span class="glyphicon glyphicon-volume-up"></span>
-					<span class="hidden-xs">Audio</span>
-				</button>
-								<button id="mute-audio" type="button" class="btn btn-primary float-right mute-button" onclick="muteAudio()">
-									<i class="fa fa-microphone-slash"></i>
-									<i class="fa fa-microphone"></i>
-									</button>
+<div class="container">
 
-									<i class="material-icons">speaker_notes_off</i>
-									<i class="material-icons">speaker_notes</i>
-
-<i class="material-icons">mic_off</i>
-<i class="material-icons">mic</i>
-
-<i class="material-icons">videocam_off</i>
-<i class="material-icons">videocam</i>
-
-<i class="material-icons">screen_share</i>
-<i class="material-icons">stop_screen_share</i>
-
-<i class="material-icons">camera_front</i>
-<i class="material-icons">camera_rear</i>
-<div class="grid">
-<div id="main-video" class="media green">
+<div class="row">
+	<!-- <header>
+	<button id="mute-video" type="button" class="btn btn-primary float-right mute-button" onclick=${()=> muteVideo()}>
+		<span class="glyphicon glyphicon-facetime-video"></span>
+		<span class="hidden-xs">Video</span>
+	</button>
+	
+	<button id="mute-audio" type="button" class="btn btn-primary float-right mute-button" onclick="muteAudio()">
+		<i class="fa fa-microphone-slash"></i>
+		<i class="fa fa-microphone"></i>
+	</button>
+	
+	<i class="material-icons">speaker_notes_off</i>
+	<i class="material-icons">speaker_notes</i>
+	
+	<i class="material-icons">mic_off</i>
+	<i class="material-icons">mic</i>
+	
+	<i class="material-icons">videocam_off</i>
+	<i class="material-icons">videocam</i>
+	
+	<i class="material-icons">screen_share</i>
+	<i class="material-icons">stop_screen_share</i>
+	
+	<i class="material-icons">camera_front</i>
+	<i class="material-icons">camera_rear</i>
+	</header> -->
+	<!-- <div class="embed-responsive embed-responsive-16by9">
+<div id="main-video" class="embed-responsive-item green">
 				<div id="video-container" class="blue">
 					</div>
 </div>
+</div> -->
+<div class="col-sm"> asdf</div>
 
-	${Chat(state, actions)}
+<div class="col-sm"> ${Chat(state, actions)}</div>
 </div>
 	<pre>${JSON.stringify(state, null, 4)}</pre>
 
+</div>
+</div>
 </div>
 	`
 }
