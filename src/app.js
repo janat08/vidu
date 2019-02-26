@@ -11,6 +11,8 @@ var OPENVIDU_SERVER_URL = "https://" + location.hostname + ":4443";
 var OPENVIDU_SERVER_SECRET = "MY_SECRET";
 var name = Math.random().toString(36)
 var session = OV.initSession();
+var publisher = null
+
 
 function initialState() {
 		var state = {
@@ -19,11 +21,26 @@ function initialState() {
 			sessionId: "asdf",
 			OV: OV,
 			session: session,
-			chat: [],
+			chat: [
+				{
+					"message": "<a>www.google.com</a>",
+					"nickname": "0.i5mc8zyi82l",
+					"avatar": ""
+				}
+			],
 			token: false,
 			name: name,
+			avatar: "",
 			otherName: "",
+			otherAvatar: "",
 			message: "",
+			videoSwitch: true,
+			micSwitch: true,
+			videoChoice: true,
+			chatSwitch: true,
+			screenSwitch: false,
+			videoDevices: null,
+			splitChat: window.matchMedia("(max-width: 639px)").matches
 		}
 
 		return P({},
@@ -42,16 +59,75 @@ window.addEventListener('beforeunload', function () {
 	if (session) session.disconnect();
 });
 
+//https://openvidu.io/api/openvidu-browser/interfaces/publisherproperties.html#publishvideo
+function publish (type){
+	var {screenSwitch, videoSwitch, micSwitch, videoChoice, videoDevices} = states()
+	var pb ={
+					audioSource: undefined, // The source of audio. If undefined default microphone
+					videoSource: undefined, // The source of video. If undefined default webcam
+					publishAudio: micSwitch,  	// Whether you want to start publishing with your audio unmuted or not
+					publishVideo: videoSwitch,  	// Whether you want to start publishing with your video enabled or not
+					// resolution: '640x480',  // The resolution of your video
+					frameRate: 30,			// The frame rate of your video
+					// insertMode: 'APPEND',	// How the video is inserted in the target element 'video-container'	
+					mirror: true       	// Whether to mirror your local video or not+
+				}
+	var typeToChoose = !videoChoice
+	if (videoDevices.length >= 2 && typeToChoose) {
+		pb.videoSource = videoDevices[typeToChoose].deviceId
+	}
+	if (screenSwitch){
+		pb.videoSource = "screen"
+		pb.mirror = false
+	}	
+	if (publisher != null && publisher.connection !=null){
+		session.unpublish(publisher)
+	}
+	var videoElement = document.getElementById("video")
+	var pub = OV.initPublisher(undefined, pb);
+	publisher = pub
+	pub.addVideoElement(videoElement);
+	session.publish(pub);
+	pub.on('videoElementCreated', function (event) {
+		event.element['muted'] = true;
+	});
+	document.querySelector('#video')['muted'] = true;
+
+	return pub
+}
+
 function actions (update) {
 		return {
-			muteVideo: function (value) {
-				update({ conditions: PS({ precipitations: value }) });
+			toggleVideo () {
+				var state = states()
+				var val = !state.videoSwitch
+				update({ videoSwitch: val});
+				publisher.publishVideo(val);
 			},
-			muteAudio: function (value) {
-				update({ conditions: PS({ sky: value }) });
+			toggleMic () {
+				var state = states()
+				var val = !state.micSwitch
+				update({ micSwitch: val });
+				publisher.publishAudio(val)
 			},
-			leaveRoom: function (value){
-
+			toggleChat () {
+				var state = states()
+				var val = !state.chatSwitch
+				update({ chatSwitch: val});
+			},
+			toggleScreen (){
+				var state = states()
+				var val = !state.screenSwitch
+				update({ screenSwitch: val });
+				publish()
+			},
+			chooseVideo (){
+				var state = states()
+				var val = !state.videoChoice
+				update({ videoChoice: val });
+			},
+			leaveRoom (){
+				session.disconnect();
 			},
 			name (ev){
 				update({name: ev.target.value})
@@ -67,14 +143,43 @@ function actions (update) {
 				})
 					.catch(error => {
 						update(old)
-						console.log("message couldn't be delivered")
+						console.warn("message couldn't be delivered")
 					});
 				update({ message: ""})
 			},
 			updateMessage(ev){
+				console.log(111111, ev, ev.target.value)
 				update({ message: ev.target.value })
 			}
 		};
+}
+
+const tokenService = {
+	initial() {
+		return {
+		};
+	},
+	service(state) {
+		return {}
+	}
+};
+const services = [
+	tokenService,
+]
+const service = state => services
+	.map(s => s.service)
+	.reduce((x, f) => P(x, f(x)), state);
+
+var update = flyd.stream();
+window.update = update
+const states = flyd.scan(P, initialState(), update)
+	// .map((state) => {
+	// 	return service(state)
+	// })
+states.map(view)
+function view(state) {
+	const element = document.getElementById("app");
+	render(element, () => App(state, actions(update)))
 }
 
 session.on('signal:chat', (event) => {
@@ -84,15 +189,9 @@ session.on('signal:chat', (event) => {
 
 session.on('streamCreated', event => {
 	// Subscribe to the Stream to receive it. HTML video will be appended to element with 'video-container' id
-	setTimeout(()=>{ var subscriber = session.subscribe(event.stream, 'video-container');
-
-	// When the HTML video has been appended to DOM...
-	subscriber.on('videoElementCreated', event => {
-		console.log(1111111111111111111111111131111111111111111111113)
-		// Add a new <p> element for the user's nickname just below its video
-		// appendUserData(event.element, subscriber.stream.connection);
-	});
-}, 1000)
+	var subscriber = session.subscribe(event.stream, undefined);
+	var videoElement = document.getElementById("other-video")
+	subscriber.addVideoElement(videoElement);
 });
 
 // On every Stream destroyed...
@@ -104,21 +203,24 @@ session.on('streamDestroyed', event => {
 
 session.on("connectionCreated", event => {
 	var nick = JSON.parse(event.connection.data).nickname
+	var avatar = JSON.parse(event.connection.data).avatar
 	nick != states().name ? update({ otherName: JSON.parse(event.connection.data).nickname }) : null
+	avatar != states().avatar ? update({ otherAvatar: JSON.parse(event.connection.data).avatar }) : null
 })
 
-////VIEWS///////////////////
-// http://www.prepbootstrap.com/bootstrap-template/dropdown-chat
-
-// https://bootsnipp.com/snippets/y8e4W
-function Message ({name}, message){
+var x = window.matchMedia("(max-width: 639px)")
+x.addListener(x=>update({splitChat: x.matches}))
+////VIEWS///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// https://www.bootdey.com/snippets/view/Chat-room-with-right-list
+function Message (state, message){
 	//your own message on right
+	var {name, avatar, otherAvatar} = state
 	var mine = name == message.nickname
 	var aRight = mine ? "chat-message right" :"chat-message left"
-
+	var avatar = mine ? avatar : otherAvatar
 	return html`
 											<div class=${aRight}>
-												<img class="message-avatar" src="https://bootdey.com/img/Content/avatar/avatar1.png" alt="">
+												<img class="message-avatar" src=${avatar} alt="">
 												<div class="message">
 													<!-- <a class="message-author" href="#"> Michael Smith </a>
 													<span class="message-date"> Mon Jan 26 2015 - 18:39:23 </span> -->
@@ -133,14 +235,50 @@ function Message ({name}, message){
 
 function Chat(state,actions){
 	var {sendMessage, updateMessage} = actions
+	if (state.splitChat){
+		return html`
+	<div class="" style="width: 100%">
+      <div class="ibox chat-view" style="max-width: 40%; ; display:inline-block; width: 800px;
+">
+      
+        <div class="ibox-content">
+          <div class="row">
+            <div class="col-lg-12 ">
+              <div class="chat-discussion">
+                ${state.chat.map(x => Message(state, x))}
+              </div>
+      
+            </div>
+      
+          </div>
+        </div>
+      </div>
+      <div class="align-top" style="max-width: 45%; display:inline-block;  vertical-align: super;">
+        <div class="col-lg-12">
+          <div class="chat-message-form">
+            <div class="form-group">
+              <form onsubmit=${sendMessage}>
+                <textarea value=${state.message} oninput=${updateMessage} class="form-control message-input" name="message"
+                  placeholder="Enter message text and press enter"></textarea>
+                <button type="submit" class="btn btn-primary">Send
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+	  </div>
+	</div>
+		`
+	}
 	return html`
-
-
+	<!-- <div class="content">
+<div class="row">
+<div class="col-sm-6"> -->
 			<div class="ibox chat-view">
 
 				<div class="ibox-content">
 					<div class="row">
-						<div class="col-lg-3 ">
+						<div class="col-lg-12 ">
 							<div class="chat-discussion">
 								${state.chat.map(x=>Message(state,x))}
 							</div>
@@ -165,98 +303,74 @@ function Chat(state,actions){
 			</div>
 
 
-
+<!-- </div>
+<div class="col-sm-6">
+</div>
+</div>
+</div> -->
 
 	`
 }
 
 function App(state, actions){
-	var {muteVideo, muteAudio, leaveRoom, name} = actions
+	var { toggleVideo, toggleMic, toggleChat, chooseVideo, toggleScreen, leaveRoom, name} = actions
+	var {screenSwitch, videoChoice, videoSwitch, micSwitch, chatSwitch} = state
 	var json = P(state, {OV: D}, {session: D})	
 	return html`
 	<div>
 	<div> ASDF</div>
 <div>
 
-<div class="container">
+<div class="">
 
-<div class="row">
-	<!-- <header>
-	<button id="mute-video" type="button" class="btn btn-primary float-right mute-button" onclick=${()=> muteVideo()}>
-		<span class="glyphicon glyphicon-facetime-video"></span>
-		<span class="hidden-xs">Video</span>
+<div class=${chatSwitch? "grid":""}>
+	<header>
+	<button onclick=${toggleScreen} type="button" class="btn btn-primary float-right mute-button">
+		<i class="material-icons">${screenSwitch ? "screen_share" : "stop_screen_share"}</i>
 	</button>
-	
-	<button id="mute-audio" type="button" class="btn btn-primary float-right mute-button" onclick="muteAudio()">
-		<i class="fa fa-microphone-slash"></i>
-		<i class="fa fa-microphone"></i>
-	</button>
-	
-	<i class="material-icons">speaker_notes_off</i>
-	<i class="material-icons">speaker_notes</i>
-	
-	<i class="material-icons">mic_off</i>
-	<i class="material-icons">mic</i>
-	
-	<i class="material-icons">videocam_off</i>
-	<i class="material-icons">videocam</i>
-	
-	<i class="material-icons">screen_share</i>
-	<i class="material-icons">stop_screen_share</i>
-	
-	<i class="material-icons">camera_front</i>
-	<i class="material-icons">camera_rear</i>
-	</header> -->
-	<!-- <div class="embed-responsive embed-responsive-16by9">
-<div id="main-video" class="embed-responsive-item green">
-				<div id="video-container" class="blue">
-					</div>
-</div>
-</div> -->
-<div class="col-sm"> asdf</div>
+	 <button onclick=${chooseVideo} type="button" class="btn btn-primary float-right mute-button">
+		<i class="material-icons">${videoChoice ?"camera_front":"camera_rear"}</i>
 
-<div class="col-sm"> ${Chat(state, actions)}</div>
+			</button>
+
+				<button onclick=${toggleVideo} type="button" class="btn btn-primary float-right mute-button">
+		<i class="material-icons">${videoSwitch ?"videocam":"videocam_off"}</i>
+					</button>
+
+						<button onclick=${toggleMic} type="button" class="btn btn-primary float-right mute-button">
+		<i class="material-icons">${micSwitch?"mic":"mic_off"}</i>
+							</button>
+
+								<button onclick=${toggleChat} type="button" class="btn btn-primary float-right mute-button">
+		<i class="material-icons">${chatSwitch?"speaker_notes":"speaker_notes_off"}</i>
+									</button>
+	</header>
+
+<div id="main-video" class="media">
+						<!-- <video id="other-video" class="media">
+												<video id="video" class="green">
+													</video>
+
+							</video> -->
+							
+					<video id="video" muted="mute" muted muted="true" class=""></video>
+					<!-- <video id="other-video" class=""></video> -->
 </div>
+
+
+${chatSwitch ?Chat(state, actions):null}
+</div>
+<button onclick=${leaveRoom} type="button" class="btn btn-primary float-right mute-button">Leave Room</button>
 	<pre>${JSON.stringify(state, null, 4)}</pre>
 
 </div>
+					<!-- <video id="other-video">
+						</video> -->
+					<video id="other-video" class="">
+						</video>
 </div>
 </div>
 	`
-}
-
-
-const tokenService = {
-	initial() {
-		return {
-		};
-	},
-	service(state) {
-		return {}
-	}
-};
-
-
-const services = [
-	// VideoInsertService,
-	tokenService,
-]
-const service = state => services
-	.map(s => s.service)
-	.reduce((x, f) => P(x, f(x)), state);
-
-const update = flyd.stream();
-window.update =update
-const states = flyd.scan(P, initialState(), update)
-	.map((state)=>{
-		return service(state)
-	})
-states.map(view)
-window.states = states
-
-function view (state) {
-	const element = document.getElementById("app");
-	render(element, () => App(state, actions(update)))
 }
 
 
@@ -266,48 +380,21 @@ function getToken(id, name, sessionName = "asdf"){
 	return process(id).then(token => {
 
 		// Connect with the token
-		session.connect(token, { nickname: name })
+		session.connect(token, { nickname: name, avatar: states().avatar })
 			.then(() => {
-
-				// --- 5) Set page layout for active call ---
-
-				// document.getElementById('session-title').innerText = mySessionId;
-				// document.getElementById('join').style.display = 'none';
-				// document.getElementById('session').style.display = 'block';
-
-				// --- 6) Get your own camera stream with the desired properties ---
-
-				// var publisher = OV.initPublisher('main-video', {
-				// 	audioSource: undefined, // The source of audio. If undefined default microphone
-				// 	videoSource: undefined, // The source of video. If undefined default webcam
-				// 	publishAudio: true,  	// Whether you want to start publishing with your audio unmuted or not
-				// 	publishVideo: true,  	// Whether you want to start publishing with your video enabled or not
-				// 	resolution: '640x480',  // The resolution of your video
-				// 	frameRate: 30,			// The frame rate of your video
-				// 	insertMode: 'APPEND',	// How the video is inserted in the target element 'video-container'	
-				// 	mirror: false       	// Whether to mirror your local video or not
-				// });
-				// var publisher = OV.initPublisher("main-video", { 
+				// var publisher = OV.initPublisher("main-video", {
 				// 	videoSource: "screen",
 				// 	resolution: '640x480',
 				// 	publishAudio: false,
-				//  });
+				// });
 
+				// session.publish(publisher);
 
-				// --- 7) Specify the actions when events take place in our publisher ---
-
-				// When our HTML video has been added to DOM...
-				publisher.on('videoElementCreated', function (event) {
-					// initMainVideo(event.element, myUserName);
-					// appendUserData(event.element, myUserName);
-				});
-
-				// // --- 8) Publish your stream ---
-
+				publisher = publish()
 				session.publish(publisher);
 			})
 			.catch(error => {
-				console.log('There was an error connecting to the session:', error.code, error.message);
+				console.error('There was an error connecting to the session:', error.code, error.message);
 			});
 	});
 }
@@ -357,56 +444,12 @@ function process(mySessionId) {
 	}
 	return createSession(mySessionId).then(sessionId => createToken(sessionId))
 }
-function initMainVideo(videoElement, userData) {
-	document.querySelector('#main-video video').srcObject = videoElement.srcObject;
-	document.querySelector('#main-video p').innerHTML = userData;
-	document.querySelector('#main-video video')['muted'] = true;
-}
-function appendUserData(videoElement, connection) {
-	var userData;
-	var nodeId;
-	if (typeof connection === "string") {
-		userData = connection;
-		nodeId = connection;
-	} else {
-		userData = JSON.parse(connection.data).clientData;
-		nodeId = connection.connectionId;
-	}
-	var dataNode = document.createElement('div');
-	dataNode.className = "data-node";
-	dataNode.id = "data-" + nodeId;
-	dataNode.innerHTML = "<p>" + userData + "</p>";
-	videoElement.parentNode.insertBefore(dataNode, videoElement.nextSibling);
-	// addClickListener(videoElement, userData);
-}
 
-function removeUserData(connection) {
-	var dataNode = document.getElementById("data-" + connection.connectionId);
-	dataNode.parentNode.removeChild(dataNode);
-}
+//////startup/////////////////////////////////////////////////////////////////////////////
 
-//////UTITLIES/////////////////////////////////////////////////////////////////////////////
-function dropRepeatsWith(eq, s) {
-	var prev;
-	return flyd.combine(function (s, self) {
-		if (!self.hasVal || !eq(s.val, prev)) {
-			self(s.val);
-			prev = s.val;
-		}
-	}, [s]);
-}
-
-function dropRepeats (s) {
-	return dropRepeatsWith(strictEq, s);
-};
-
-var dropRepeatsWith = flyd.curryN(2, dropRepeatsWith);
-
-function strictEq(a, b) {
-	return a === b;
-}
-
-
+OV.getDevices().then(x => {
+	update({ videoDevices: x.filter(x => x.kind == "videoinput") })
+})
 
 $(document).ready(function () {
 	getToken("asdf", name).then(() => {
