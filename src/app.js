@@ -13,7 +13,7 @@ const { render, html } = lighterhtml;
 var OV = new OpenVidu();
 
 var OPENVIDU_SERVER_URL = "https://" + location.hostname + ":4443"; //"linux"
-var OPENVIDU_SERVER_URL = "https://192.168.99.100:4443" //win
+// var OPENVIDU_SERVER_URL = "https://192.168.99.100:4443" //win
 
 var OPENVIDU_SERVER_SECRET = "MY_SECRET";
 var name = "asdf" || document.getElementById('user').value;
@@ -21,7 +21,6 @@ var sessionId = "asdf" || document.getElementById('sessionName').value
 
 var session = OV.initSession();
 var publisher = null
-
 //object that is used to evaluate all expressions in render- function by name of App, and is updated by events
 function initialState() {
 	var state = {
@@ -41,7 +40,7 @@ function initialState() {
 		chatSwitch: true,
 		screenSwitch: false,
 		videoDevices: null,
-		splitChat: window.matchMedia("(max-width: 639px)").matches
+		splitChat: window.matchMedia("(max-width: 639px)").matches //it not entirely reponsible for responsive design, I believe media/grid element also has condition for it
 	}
 
 	return P({},
@@ -155,7 +154,10 @@ function actions(update) {
 			update({ message: "" })
 		},
 		updateMessage(ev) {
-			console.log(111111, ev, ev.target.value)
+			if (ev.keyCode == 13) {
+				actions(update).sendMessage(ev)
+				return
+			}
 			update({ message: ev.target.value })
 		}
 	};
@@ -211,7 +213,7 @@ function Chat(state, actions) {
 	if (state.splitChat) {
 		return html`
 <div class="" style="width: 100%">
-	<div class="ibox chat-view" style="max-width: 40%; ; display:inline-block; width: 800px;">
+	<div class="ibox chat-view" style="max-width: 50%; ; display:inline-block; width: 1000px;">
 		<div class="ibox-content">
 			<div class="row">
 				<div class="col-lg-12 ">
@@ -224,12 +226,12 @@ function Chat(state, actions) {
 			</div>
 		</div>
 	</div>
-	<div class="align-top" style="max-width: 45%; display:inline-block;  vertical-align: super;">
+	<div class="align-top makeTop">
 		<div class="col-lg-12">
 			<div class="chat-message-form">
 				<div class="form-group">
 					<form onsubmit=${sendMessage}>
-						<textarea value=${state.message} oninput=${updateMessage} class="form-control message-input"
+						<textarea value=${state.message} onkeyup=${updateMessage} class="form-control message-input"
 							name="message" placeholder="Enter message text and press enter"></textarea>
 						<button type="submit" class="btn btn-primary">Send
 						</button>
@@ -242,9 +244,9 @@ function Chat(state, actions) {
 		`
 	}
 	return html`
-<div class="ibox chat-view">
-	<div class="ibox-content">
-		<div class="row">
+<div class="ibox chat-view" style="max-height: 100%, height: 2000px">
+	<div class="ibox-content" style="max-height: 100%, height: 2000px">
+		<div class="row" style="max-height: 100%, height: 2000px">
 			<div class="col-lg-12 ">
 				<div class="chat-discussion">
 					${state.chat.map(x => Message(state, x))}
@@ -258,8 +260,8 @@ function Chat(state, actions) {
 						<form onsubmit=${sendMessage}>
 							<textarea value=${state.message} oninput=${updateMessage} class="form-control message-input"
 								name="message" placeholder="Enter message text and press enter"></textarea>
-							<button type="submit" class="btn btn-primary">Send
-							</button>
+							<div class="text-center"><button type="submit" class="btn btn-primary">Send
+							</button> </div>
 						</form>
 					</div>
 				</div>
@@ -272,7 +274,7 @@ function Chat(state, actions) {
 
 function App(state, actions) {
 	var { toggleVideo, toggleMic, toggleChat, chooseVideo, toggleScreen, leaveRoom, name } = actions
-	var { screenSwitch, videoChoice, videoSwitch, micSwitch, chatSwitch } = state
+	var { screenSwitch, videoChoice, videoSwitch, micSwitch, chatSwitch, splitChat } = state
 	// for rendering state
 	// var json = P({}, state, { OV: D }, { session: D })
 	// < pre > ${ JSON.stringify(json, null, 4)}</pre >
@@ -281,8 +283,9 @@ function App(state, actions) {
 	<div> ASDF</div>
 	<div>
 		<div class="">
-			<div class=${chatSwitch ? "grid" : "" }>
+			<div class=${chatSwitch && !splitChat ? "grid" : "" }>
 				<header>
+				<div class="text-center">
 					<button onclick=${toggleScreen} type="button" class="btn btn-primary float-right mute-button">
 						<i class="material-icons">${screenSwitch ? "screen_share" : "stop_screen_share"}</i>
 					</button>
@@ -302,6 +305,7 @@ function App(state, actions) {
 					<button onclick=${toggleChat} type="button" class="btn btn-primary float-right mute-button">
 						<i class="material-icons">${chatSwitch ? "speaker_notes" : "speaker_notes_off"}</i>
 					</button>
+				</div>
 				</header>
 
 				<div id="main-video" class="media">
@@ -310,8 +314,10 @@ function App(state, actions) {
 				</div>
 				${chatSwitch ? Chat(state, actions) : null}
 			</div>
-			<button onclick=${leaveRoom} type="button" class="btn btn-primary float-right mute-button">Leave
+			<div class="text-center">
+			<button onclick=${leaveRoom} type="button" class="btn btn-primary float-middle mute-button">Leave
 				Room</button>
+</div>
 		</div>
 		</video>
 	</div>
@@ -337,6 +343,10 @@ function publish(type) {
 	var typeToChoose = !videoChoice
 	if (videoDevices.length >= 2 && typeToChoose) {
 		pb.videoSource = videoDevices[typeToChoose].deviceId
+	}
+	//switch camera on phone on first publish
+	if (videoDevices.length >= 2 && publisher == null){
+		pb.videoSource = videoDevices[1].deviceId
 	}
 	if (screenSwitch) {
 		pb.videoSource = "screen"

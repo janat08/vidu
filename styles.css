@@ -9,10 +9,24 @@
   z-index: -4
 }
 #video{
-  width:50%;
+  max-width:50%;
+  max-height: 50%;
+  position: absolute;
+  top: 5%;
+  right: 5%;
+  z-index: 33;
+  /* margin: -60rem; */
 }
 #other-video{
-  width:50%;
+  width:100%;
+}
+
+.makeTop{
+    vertical-align: top;
+max-width: 45%;
+display: inline-block;
+
+
 }
 
 /* #video{
