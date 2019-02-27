@@ -12,16 +12,20 @@ const { render, html } = lighterhtml;
 
 var OV = new OpenVidu();
 
-var OPENVIDU_SERVER_URL = "https://" + location.hostname + ":4443";
+var OPENVIDU_SERVER_URL = "https://" + location.hostname + ":4443"; //"linux"
+var OPENVIDU_SERVER_URL = "https://192.168.99.100:4443" //win
+
 var OPENVIDU_SERVER_SECRET = "MY_SECRET";
-var name = Math.random().toString(36)
+var name = "asdf" || document.getElementById('user').value;
+var sessionId = "asdf" || document.getElementById('sessionName').value
+
 var session = OV.initSession();
 var publisher = null
 
 //object that is used to evaluate all expressions in render- function by name of App, and is updated by events
 function initialState() {
 	var state = {
-		sessionId: "",
+		sessionId: sessionId,
 		OV: OV,
 		session: session,
 		chat: [],
@@ -85,7 +89,7 @@ OV.getDevices().then(x => {
 })
 
 $(document).ready(function () {
-	getToken("asdf", name).then(() => {
+	getToken(sessionId, name).then(() => {
 		update({ token: true })
 	})
 });
@@ -193,7 +197,8 @@ function Message(state, message) {
 		<!-- <a class="message-author" href="#"> Michael Smith </a>
 		<span class="message-date"> Mon Jan 26 2015 - 18:39:23 </span> -->
 		<span class="message-content">
-			${{ html: anchorme(message.message) }}
+			<!-- unsanitized for a links -->
+			${{ html: anchorme(message.message) }} 
 		</span>
 	</div>
 </div>
@@ -348,7 +353,7 @@ function publish(type) {
 	return pub
 }
 
-function getToken(id, name, sessionName = "asdf") {
+function getToken(id, name) {
 	return process(id).then(token => {
 		// Connect with the token
 		session.connect(token, { nickname: name, avatar: states().avatar })
