@@ -40,6 +40,9 @@ function initialState() {
 		chatSwitch: true,
 		screenSwitch: false,
 		videoDevices: null,
+		//the ugly, the things that should have really been done with css
+		chatHeight: 400,
+		sendHeight: 90,
 		splitChat: window.matchMedia("(max-width: 639px)").matches //it not entirely reponsible for responsive design, I believe media/grid element also has condition for it
 	}
 
@@ -92,9 +95,31 @@ $(document).ready(function () {
 		update({ token: true })
 	})
 });
+//definition at bottom of file
+window.addEventListener("optimizedResize", function () {
+	var state = states()
+	if($(".chat-discussion").length){
+		var videoH = $("#other-video").height()
+		var sendE = $("#send")
+		var chatE = $("#chat")
+		var sendH = sendE.height()
+		var chatH = chatE.height()
+		var modifier = videoH/(sendH+chatH)
+		console.log(modifier)
+		// sendE.height(sendH*modifier)
+		// chatE.height(chatH*modifier)
+		update({chatHeight: chatH*modifier})
+		update({sendHeight: sendH*modifier})
+	}
+});
+
+$(window).trigger("resize")
+
 window.onbeforeunload = function () {
 	if (session) session.disconnect();
 };
+
+
 
 /////////////////////EVENTS///////////////////////////////////
 //methods/functions that generally run update function to update state above, that triggers rerun of App
@@ -210,6 +235,11 @@ function Message(state, message) {
 
 function Chat(state, actions) {
 	var { sendMessage, updateMessage } = actions
+	var chatHeight = "height:"+state.chatHeight+"px;"
+	function setHeight(key){
+		return "height:" + state[key] + "px;"
+
+	}
 	if (state.splitChat) {
 		return html`
 <div class="" style="width: 100%">
@@ -217,7 +247,7 @@ function Chat(state, actions) {
 		<div class="ibox-content">
 			<div class="row">
 				<div class="col-lg-12 ">
-					<div class="chat-discussion">
+					<div style="height:400px" class="chat-discussion">
 						${state.chat.map(x => Message(state, x))}
 					</div>
 
@@ -231,7 +261,7 @@ function Chat(state, actions) {
 			<div class="chat-message-form">
 				<div class="form-group">
 					<form onsubmit=${sendMessage}>
-						<textarea value=${state.message} onkeyup=${updateMessage} class="form-control message-input"
+						<textarea style="height:90px" value=${state.message} onkeyup=${updateMessage} class="form-control message-input"
 							name="message" placeholder="Enter message text and press enter"></textarea>
 						<button type="submit" class="btn btn-primary">Send
 						</button>
@@ -248,17 +278,17 @@ function Chat(state, actions) {
 	<div class="ibox-content" style="max-height: 100%, height: 2000px">
 		<div class="row" style="max-height: 100%, height: 2000px">
 			<div class="col-lg-12 ">
-				<div class="chat-discussion">
+				<div id="chat" style=${setHeight("chatHeight")} class="chat-discussion">
 					${state.chat.map(x => Message(state, x))}
 				</div>
 			</div>
 		</div>
-		<div class="row">
+		<div class="row" id="send">
 			<div class="col-lg-12">
 				<div class="chat-message-form">
 					<div class="form-group">
 						<form onsubmit=${sendMessage}>
-							<textarea value=${state.message} oninput=${updateMessage} class="form-control message-input"
+							<textarea style=${setHeight("sendHeight")} value=${state.message} oninput=${updateMessage} class="form-control message-input"
 								name="message" placeholder="Enter message text and press enter"></textarea>
 							<div class="text-center"><button type="submit" class="btn btn-primary">Send
 							</button> </div>
@@ -423,3 +453,33 @@ function process(mySessionId) {
 	return createSession(mySessionId).then(sessionId => createToken(sessionId))
 }
 
+(function () {
+	var throttle = function (type, name, obj) {
+		obj = obj || window;
+		var running = false;
+		var func = function () {
+			if (running) { return; }
+			running = true;
+			requestAnimationFrame(function () {
+				obj.dispatchEvent(new CustomEvent(name));
+				running = false;
+			});
+		};
+		obj.addEventListener(type, func);
+	};
+
+	/* init - you can init any event */
+	throttle("resize", "optimizedResize");
+})();
+
+function debounceTime (time, source$) {
+	var timeout
+	return flyd.combine(function (s$, self) {
+		if (timeout) {
+			clearTimeout(timeout)
+		}
+		timeout = setTimeout(function () {
+			self(s$())
+		}, time)
+	}, [source$])
+}

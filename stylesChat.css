@@ -23,11 +23,6 @@ body{margin-top:20px;}
     min-height: 2002px;
   }
 }
-
-
-.message-input {
-  height: 90px !important;
-}
 .chat-avatar {
   white: 36px;
   height: 36px;
@@ -111,7 +106,7 @@ body{margin-top:20px;}
 .chat-discussion {
   background: #eee;
   padding: 15px;
-  height: 400px;
+  /* height: 400px; */
   overflow-y: auto;
 }
 .chat-users {
