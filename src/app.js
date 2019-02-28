@@ -79,51 +79,49 @@ const states = flyd.scan(P, initialState(), update)
 	.map((state) => {
 		return service(state)
 	})
-states.map(view)
+var rendered = states.map(view)
 function view(state) {
 	const element = document.getElementById("app");
 	render(element, () => App(state, actions(update)))
 }
+
+/////////////////////EVENTS/////////////////////////////////////////////////////////////////////////////////////
+//methods/functions that generally run update function to update state above, that triggers rerun of App
+//update method is the first stream, the second one determines state, and third reruns App (all 3 of these streams is above)
+
+//makes sure dom has rendered before streams get attached to elements
+var init = once(rendered)
+flyd.on(val=>{
+	getToken(sessionId, name).then(() => {
+		update({ token: true })
+	})
+}, init)
 
 
 OV.getDevices().then(x => {
 	update({ videoDevices: x.filter(x => x.kind == "videoinput") })
 })
 
-$(document).ready(function () {
-	getToken(sessionId, name).then(() => {
-		update({ token: true })
-	})
-});
-//definition at bottom of file
+// definition at bottom of file
 window.addEventListener("optimizedResize", function () {
 	var state = states()
-	if($(".chat-discussion").length){
+	if($(".chat-discussion").length && !state.splitChat){
 		var videoH = $("#other-video").height()
 		var sendE = $("#send")
 		var chatE = $("#chat")
 		var sendH = sendE.height()
 		var chatH = chatE.height()
-		var modifier = videoH/(sendH+chatH)
-		console.log(modifier)
-		// sendE.height(sendH*modifier)
-		// chatE.height(chatH*modifier)
-		update({chatHeight: chatH*modifier})
-		update({sendHeight: sendH*modifier})
+		var modifier = ((videoH-sendH)/chatH)
+		update({ chatHeight: chatH * modifier, })
 	}
 });
 
-$(window).trigger("resize")
+// $(window).trigger("resize")
 
 window.onbeforeunload = function () {
 	if (session) session.disconnect();
 };
 
-
-
-/////////////////////EVENTS///////////////////////////////////
-//methods/functions that generally run update function to update state above, that triggers rerun of App
-//update method is the first stream, the second one determines state, and third reruns App (all 3 of these streams is above)
 function actions(update) {
 	return {
 		toggleVideo() {
@@ -240,6 +238,8 @@ function Chat(state, actions) {
 		return "height:" + state[key] + "px;"
 
 	}
+	var s = setHeight("sendHeight")
+	var c = setHeight("chatHeight")
 	if (state.splitChat) {
 		return html`
 <div class="" style="width: 100%">
@@ -278,7 +278,7 @@ function Chat(state, actions) {
 	<div class="ibox-content" style="max-height: 100%, height: 2000px">
 		<div class="row" style="max-height: 100%, height: 2000px">
 			<div class="col-lg-12 ">
-				<div id="chat" style=${setHeight("chatHeight")} class="chat-discussion">
+				<div id="chat" style=${c} class="chat-discussion">
 					${state.chat.map(x => Message(state, x))}
 				</div>
 			</div>
@@ -288,7 +288,7 @@ function Chat(state, actions) {
 				<div class="chat-message-form">
 					<div class="form-group">
 						<form onsubmit=${sendMessage}>
-							<textarea style=${setHeight("sendHeight")} value=${state.message} oninput=${updateMessage} class="form-control message-input"
+							<textarea style=${s} value=${state.message} oninput=${updateMessage} class="form-control message-input"
 								name="message" placeholder="Enter message text and press enter"></textarea>
 							<div class="text-center"><button type="submit" class="btn btn-primary">Send
 							</button> </div>
@@ -482,4 +482,11 @@ function debounceTime (time, source$) {
 			self(s$())
 		}, time)
 	}, [source$])
+}
+
+function once (stream$) {
+	return flyd.combine(function (s$, self) {
+		self(s$())
+		self.end(true);
+	}, [stream$])
 }
