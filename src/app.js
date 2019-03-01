@@ -310,11 +310,11 @@ function App(state, actions) {
 	// < pre > ${ JSON.stringify(json, null, 4)}</pre >
 	return html`
 <div>
-	<div> ASDF</div>
 	<div>
 		<div class="">
 			<div class=${chatSwitch && !splitChat ? "grid" : "" }>
 				<header>
+					<img style="text-align: bottom" src="./dist/ucs-logo.png">
 				<div class="text-center">
 					<button onclick=${toggleScreen} type="button" class="btn btn-primary float-right mute-button">
 						<i class="material-icons">${screenSwitch ? "screen_share" : "stop_screen_share"}</i>
@@ -471,18 +471,6 @@ function process(mySessionId) {
 	/* init - you can init any event */
 	throttle("resize", "optimizedResize");
 })();
-
-function debounceTime (time, source$) {
-	var timeout
-	return flyd.combine(function (s$, self) {
-		if (timeout) {
-			clearTimeout(timeout)
-		}
-		timeout = setTimeout(function () {
-			self(s$())
-		}, time)
-	}, [source$])
-}
 
 function once (stream$) {
 	return flyd.combine(function (s$, self) {
