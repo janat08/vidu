@@ -13,11 +13,11 @@ const { render, html } = lighterhtml;
 var OV = new OpenVidu();
 
 var OPENVIDU_SERVER_URL = "https://" + location.hostname + ":4443"; //"linux"
-// var OPENVIDU_SERVER_URL = "https://192.168.99.100:4443" //win
+var OPENVIDU_SERVER_URL = "https://192.168.99.100:4443" //win
 
 var OPENVIDU_SERVER_SECRET = "MY_SECRET";
-var name = "asdf" || document.getElementById('user').value;
-var sessionId = "asdf" || document.getElementById('sessionName').value
+var name = document.getElementById('user').value;
+var sessionId = document.getElementById('sessionName').value
 
 var session = OV.initSession();
 var publisher = null
