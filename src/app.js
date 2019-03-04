@@ -16,8 +16,14 @@ var OPENVIDU_SERVER_URL = "https://" + location.hostname + ":4443"; //"linux"
 var OPENVIDU_SERVER_URL = "https://192.168.99.100:4443" //win
 
 var OPENVIDU_SERVER_SECRET = "MY_SECRET";
-var name = document.getElementById('user').value;
-var sessionId = document.getElementById('sessionName').value
+var userVar = document.getElementById('user')
+var sessionVar = document.getElementById('sessionName')
+var name = typeof userName != "undefined"? userName: false || userVar ? userVar.value : false || "asdf"
+var sessionId = typeof sessionId != "undefined"? sessionId: false || sessionVar ? sessionVar.value : false || "asdf"
+
+//prod
+var OPENVIDU_SERVER_URL = "https://pluton.ucsturkey.com:4443";
+var OPENVIDU_SERVER_SECRET = "p1ssw0rd";
 
 var session = OV.initSession();
 var publisher = null
@@ -91,27 +97,38 @@ function view(state) {
 
 //makes sure dom has rendered before streams get attached to elements
 var init = once(rendered)
-flyd.on(val=>{
+flyd.on(val => {
+	//global, in produciton
+	if (typeof sessionToken != "undefined") {
+		connect(sessionToken)
+		update({ token: true })
+		return
+	}
 	getToken(sessionId, name).then(() => {
 		update({ token: true })
 	})
+
 }, init)
 
 
 OV.getDevices().then(x => {
-	update({ videoDevices: x.filter(x => x.kind == "videoinput") })
+	update({
+		videoDevices: x.filter(x => x.kind == "videoinput").sort((x, y) => {
+			return x.label.localeCompare(y.label)
+		})
+	})
 })
 
 // definition at bottom of file
 window.addEventListener("optimizedResize", function () {
 	var state = states()
-	if($(".chat-discussion").length && !state.splitChat){
+	if ($(".chat-discussion").length && !state.splitChat) {
 		var videoH = $("#other-video").height()
 		var sendE = $("#send")
 		var chatE = $("#chat")
 		var sendH = sendE.height()
 		var chatH = chatE.height()
-		var modifier = ((videoH-sendH)/chatH)
+		var modifier = ((videoH - sendH) / chatH)
 		update({ chatHeight: chatH * modifier, })
 	}
 });
@@ -151,6 +168,7 @@ function actions(update) {
 			var state = states()
 			var val = !state.videoChoice
 			update({ videoChoice: val });
+			publish()
 		},
 		leaveRoom() {
 			session.disconnect();
@@ -223,7 +241,7 @@ function Message(state, message) {
 		<span class="message-date"> Mon Jan 26 2015 - 18:39:23 </span> -->
 		<span class="message-content">
 			<!-- unsanitized for a links -->
-			${{ html: anchorme(message.message) }} 
+			${{ html: anchorme(message.message) }}
 		</span>
 	</div>
 </div>
@@ -233,8 +251,8 @@ function Message(state, message) {
 
 function Chat(state, actions) {
 	var { sendMessage, updateMessage } = actions
-	var chatHeight = "height:"+state.chatHeight+"px;"
-	function setHeight(key){
+	var chatHeight = "height:" + state.chatHeight + "px;"
+	function setHeight(key) {
 		return "height:" + state[key] + "px;"
 
 	}
@@ -261,8 +279,8 @@ function Chat(state, actions) {
 			<div class="chat-message-form">
 				<div class="form-group">
 					<form onsubmit=${sendMessage}>
-						<textarea style="height:90px" value=${state.message} onkeyup=${updateMessage} class="form-control message-input"
-							name="message" placeholder="Enter message text and press enter"></textarea>
+						<textarea style="height:90px" value=${state.message} onkeyup=${updateMessage} class="form-control message-input" name="message"
+						 placeholder="Enter message text and press enter"></textarea>
 						<button type="submit" class="btn btn-primary">Send
 						</button>
 					</form>
@@ -288,10 +306,11 @@ function Chat(state, actions) {
 				<div class="chat-message-form">
 					<div class="form-group">
 						<form onsubmit=${sendMessage}>
-							<textarea style=${s} value=${state.message} oninput=${updateMessage} class="form-control message-input"
-								name="message" placeholder="Enter message text and press enter"></textarea>
-							<div class="text-center"><button type="submit" class="btn btn-primary">Send
-							</button> </div>
+							<textarea style=${s} value=${state.message} oninput=${updateMessage} class="form-control message-input" name="message" placeholder="Enter message text and press enter"></textarea>
+							<div class="text-center">
+								<button type="submit" class="btn btn-primary">Send
+								</button>
+							</div>
 						</form>
 					</div>
 				</div>
@@ -312,30 +331,30 @@ function App(state, actions) {
 <div>
 	<div>
 		<div class="">
-			<div class=${chatSwitch && !splitChat ? "grid" : "" }>
+			<div class=${chatSwitch && !splitChat ? "grid" : ""}>
 				<header>
 					<img style="text-align: bottom" src="./dist/ucs-logo.png">
-				<div class="text-center">
-					<button onclick=${toggleScreen} type="button" class="btn btn-primary float-right mute-button">
-						<i class="material-icons">${screenSwitch ? "screen_share" : "stop_screen_share"}</i>
-					</button>
-					<button onclick=${chooseVideo} type="button" class="btn btn-primary float-right mute-button">
-						<i class="material-icons">${videoChoice ? "camera_front" : "camera_rear"}</i>
+					<div class="text-center">
+						<button onclick=${toggleScreen} type="button" class="btn btn-primary float-right mute-button">
+							<i class="material-icons">${screenSwitch ? "screen_share" : "stop_screen_share"}</i>
+						</button>
+						<button onclick=${chooseVideo} type="button" class="btn btn-primary float-right mute-button">
+							<i class="material-icons">${videoChoice ? "camera_front" : "camera_rear"}</i>
 
-					</button>
+						</button>
 
-					<button onclick=${toggleVideo} type="button" class="btn btn-primary float-right mute-button">
-						<i class="material-icons">${videoSwitch ? "videocam" : "videocam_off"}</i>
-					</button>
+						<button onclick=${toggleVideo} type="button" class="btn btn-primary float-right mute-button">
+							<i class="material-icons">${videoSwitch ? "videocam" : "videocam_off"}</i>
+						</button>
 
-					<button onclick=${toggleMic} type="button" class="btn btn-primary float-right mute-button">
-						<i class="material-icons">${micSwitch ? "mic" : "mic_off"}</i>
-					</button>
+						<button onclick=${toggleMic} type="button" class="btn btn-primary float-right mute-button">
+							<i class="material-icons">${micSwitch ? "mic" : "mic_off"}</i>
+						</button>
 
-					<button onclick=${toggleChat} type="button" class="btn btn-primary float-right mute-button">
-						<i class="material-icons">${chatSwitch ? "speaker_notes" : "speaker_notes_off"}</i>
-					</button>
-				</div>
+						<button onclick=${toggleChat} type="button" class="btn btn-primary float-right mute-button">
+							<i class="material-icons">${chatSwitch ? "speaker_notes" : "speaker_notes_off"}</i>
+						</button>
+					</div>
 				</header>
 
 				<div id="main-video" class="media">
@@ -345,9 +364,9 @@ function App(state, actions) {
 				${chatSwitch ? Chat(state, actions) : null}
 			</div>
 			<div class="text-center">
-			<button onclick=${leaveRoom} type="button" class="btn btn-primary float-middle mute-button">Leave
-				Room</button>
-</div>
+				<button onclick=${leaveRoom} type="button" class="btn btn-primary float-middle mute-button">Leave Room
+				</button>
+			</div>
 		</div>
 		</video>
 	</div>
@@ -371,11 +390,11 @@ function publish(type) {
 		mirror: true       	// Whether to mirror your local video or not+
 	}
 	var typeToChoose = !videoChoice
-	if (videoDevices.length >= 2 && typeToChoose) {
-		pb.videoSource = videoDevices[typeToChoose].deviceId
+	if (videoDevices.length >= 2) {
+		pb.videoSource = videoDevices[!typeToChoose + 0].deviceId
 	}
 	//switch camera on phone on first publish
-	if (videoDevices.length >= 2 && publisher == null){
+	if (videoDevices.length >= 2 && publisher == null) {
 		pb.videoSource = videoDevices[1].deviceId
 	}
 	if (screenSwitch) {
@@ -393,18 +412,19 @@ function publish(type) {
 	return pub
 }
 
+function connect(token) {
+	session.connect(token, { nickname: name, avatar: states().avatar })
+		.then(() => {
+			publisher = publish()
+			session.publish(publisher);
+		})
+		.catch(error => {
+			console.error('There was an error connecting to the session:', error.code, error.message);
+		});
+}
+
 function getToken(id, name) {
-	return process(id).then(token => {
-		// Connect with the token
-		session.connect(token, { nickname: name, avatar: states().avatar })
-			.then(() => {
-				publisher = publish()
-				session.publish(publisher);
-			})
-			.catch(error => {
-				console.error('There was an error connecting to the session:', error.code, error.message);
-			});
-	});
+	return process(id).then(connect)
 }
 
 function process(mySessionId) {
@@ -472,7 +492,7 @@ function process(mySessionId) {
 	throttle("resize", "optimizedResize");
 })();
 
-function once (stream$) {
+function once(stream$) {
 	return flyd.combine(function (s$, self) {
 		self(s$())
 		self.end(true);
